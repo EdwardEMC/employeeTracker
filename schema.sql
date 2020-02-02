@@ -4,13 +4,13 @@ CREATE DATABASE business_db;
 
 USE business_db;
 
-CREATE TABLE department (
+CREATE TABLE departments (
     id INT AUTO_INCREMENT NOT NULL,
     name VARCHAR(30) NOT NULL,
     PRIMARY KEY(id)
 );
 
-CREATE TABLE role (
+CREATE TABLE roles (
     id INT AUTO_INCREMENT NOT NULL,
     title VARCHAR(30) NOT NULL,
     salary DECIMAL(10, 2) NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE role (
     PRIMARY KEY(id)
 );
 
-CREATE TABLE employee (
+CREATE TABLE employees (
     id INT AUTO_INCREMENT NOT NULL,
     first_name VARCHAR(30) NOT NULL,
     last_name VARCHAR(30) NOT NULL,
@@ -27,11 +27,25 @@ CREATE TABLE employee (
     PRIMARY KEY(id)
 );
 
+-- join to display full employ information
+SELECT 
+	employees.id, 
+    employees.first_name, 
+    employees.last_name, 
+    employees.manager_id, 
+    roles.title, 
+    roles.salary, 
+    departments.name
+FROM employees
+    INNER JOIN roles ON employees.role_id = roles.id
+	INNER JOIN departments ON roles.department_id = departments.id;
+
+-- example of where after the join WHERE departments.name = 'Legal';
+
+-- selecting from the tables
 SELECT * 
-FROM department;
-
+FROM departments;
 SELECT *
-FROM role;
-
+FROM roles;
 SELECT *
-FROM employee;
+FROM employees;
