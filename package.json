@@ -1,0 +1,23 @@
+{
+  "name": "tracker",
+  "version": "1.0.0",
+  "description": "An application to track employees",
+  "main": "connection.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EdwardEMC/employeeTracker.git"
+  },
+  "author": "Edward Coad",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/EdwardEMC/employeeTracker/issues"
+  },
+  "homepage": "https://github.com/EdwardEMC/employeeTracker#readme",
+  "dependencies": {
+    "inquirer": "^7.0.4",
+    "mysql": "^2.18.1"
+  }
+}
