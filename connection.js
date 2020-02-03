@@ -4,6 +4,7 @@
 var mysql = require("mysql");
 var inquirer = require("inquirer");
 
+//printing error when memory leaking occurs
 // process.on('warning', function(w){
 //     console.log(' => Suman interactive warning => ', w.stack || w);
 // });
@@ -70,7 +71,7 @@ function vDeparment() {
                     });
                     break;
                 default:
-                    back(mainMenu);
+                    mainInq();
             }
         });
 }
@@ -87,7 +88,7 @@ function vManagement() {
             }
         ]).then(function(response) {
             if(response.role === "Back") {
-                back(mainMenu);
+               return mainInq();
             }
             connection.query(
                 joined + "WHERE departments.name = ?", 
@@ -100,7 +101,7 @@ function vManagement() {
         });
 }
 
-//function to view the budget of departments and business as whole
+//function to view the budget of departments or business as whole
 function budget() {
     inquirer
         .prompt([
@@ -111,15 +112,15 @@ function budget() {
                 name: "budget"
             }
         ]).then(function(response) {
-            if(response.budget==="Total") {
-                let WHERE = "";
-                budgetQuery(WHERE);
+            if(response.budget==="Back") {
+                return mainInq();
             }
-            else if(response.budget==="Back") {
-                back(mainMenu);
+            else if(response.budget==="Total") {
+                let WHERE = "";
+                return budgetQuery(WHERE);
             }
             let WHERE = "WHERE department.role = " + response.budget.toLowerCase();
-            budgetQuery(WHERE)
+            return budgetQuery(WHERE)
         });
 }
 
@@ -135,9 +136,35 @@ function budgetQuery(where) {
     });
 }
 
-//function to update employee role
+//function to update employee role WORKING ON IT!!!!!!!
 function upEmployee() {
+    let options = [];
+    let managers = []; //making the manager id automatically be assigned instead of user input
+    let roles = []; //making the role id automatically be selected instead of user input
 
+    connection.query(joined, function(err, result) {       
+        result.forEach(element => {
+            if(!roles.includes(element.role_id + " " + element.title)&&!element.title.includes("Lead")) {
+                roles.push(element.role_id + " " + element.title)
+            }
+            if(element.title.includes("Lead")) {
+                managers.push(element.id + " |" + element.title + " |" + element.first_name + " |" + element.last_name);
+            }
+            options.push(element.first_name + " " + element.last_name);
+        });
+        
+        inquirer
+            .prompt([
+                {
+                    type: "list",
+                    message: "Which employee do you want to update?",
+                    choices: options,
+                    name: "employee"
+                }
+            ]).then(function(response) {
+                updateEmp(response, roles, managers);
+            });
+    });
 }
 
 //function to update employee managers
@@ -147,7 +174,33 @@ function upManager() {
 
 //function to add department, role, employee
 function aDepartment() {
-
+    inquirer
+        .prompt([
+            {
+                type: "list",
+                message: "What would you like to add?",
+                choices: ["Department", "Role", "Employee", "Back"],
+                name: "add_column"
+            }
+        ]).then(function(response) {
+            //connection query to access all information??
+            connection.query(joined, function(err, result) {
+                if(err) throw err;
+                switch(response.add_column.toLowerCase()) { //need to fix sub functions
+                case "department":
+                    newDep();
+                    break;
+                case "role":
+                    newRole(result);
+                    break;
+                case "employee":
+                    newEmp(result);
+                    break;
+                default:
+                    mainInq();
+            }
+            });  
+        });
 }
 
 //function to delete department, role or employee
@@ -206,7 +259,162 @@ function mainInq() {
                     connection.end();
             }
         });
-} 
+}
+
+//follow up inquirer for upEmployee() WORKING ON IT!!!!!!!
+function updateEmp(response, roles, managers) {
+    let worker = response.employee.split(" "); 
+    inquirer
+        .prompt([
+            {
+                type: "list",
+                message: "What role are they going to fill?",
+                choices: roles, //get list of roles from connection query transfer them into their id's
+                name: "role"
+            },
+            {
+                type: "list",
+                message: "Who is their manager?",
+                choices: managers,
+                name: "manager"
+            }
+        ]).then(function(response) {
+            let role = response.role.split(" ");
+            let manager_id = response.manager.split(" ");
+            connection.query("UPDATE employees SET ? WHERE ?", 
+            [
+                {
+                    role_id: role[0],
+                    manager_id: manager_id[0]
+                },
+                {
+                    first_name:worker[0], 
+                    last_name:worker[1]
+                }
+            ]), 
+            function(err, result) {
+                if(err) throw err;
+                console.log(result);
+                mainMenu();
+            }
+        });
+}
+
+// //function for new department
+function newDep() {
+    inquirer
+        .prompt([
+            {
+                type: "input",
+                message: "What is the new departments name?",
+                name: "new"
+            }
+        ]).then(function(response) {
+            connection.query("INSERT INTO departments SET ?", [{name:response.new}], function(err, result) {
+                if(err) throw err;
+                console.table(result);
+                back(aDepartment); //function to go back to chosen menu
+            });
+        });
+}
+
+// //function for new role
+function newRole(result) {
+    let departments = []; //making the deparment id automatically be selected instead of user input
+    result.forEach(element => {
+        if(!departments.includes(element.dep_id + " " + element.name)) {
+            departments.push(element.dep_id + " " + element.name)
+        }
+    });
+
+    inquirer
+        .prompt([
+            {
+                type: "input",
+                message: "What is the new roles title?",
+                name: "title"
+            },
+            {
+                type: "input",
+                message: "What is the new roles salary?",
+                name: "salary"
+            },
+            {
+                type: "list",
+                message: "What is the new roles department id?",
+                choices: departments,
+                name: "id"
+            }
+        ]).then(function(response) {
+            let id = response.id.split(" ");
+            connection.query("INSERT INTO roles SET ?", 
+            [{
+                title:response.title, 
+                salary:response.salary, 
+                role_id:id[0]
+            }], 
+            function(err, result) {
+                if(err) throw err;
+                console.table(result);
+                back(aDepartment);
+            });
+        });
+}
+
+// //function for new employee
+function newEmp(result) {
+    let managers = []; //making the manager id automatically be assigned instead of user input
+    let roles = []; //making the role id automatically be selected instead of user input
+    result.forEach(element => {
+        if(!roles.includes(element.role_id + " " + element.title)) {
+            roles.push(element.role_id + " " + element.title)
+        }
+        if(element.title.includes("Lead")) {
+            managers.push(element.id + " |" + element.title + " |" + element.first_name + " |" + element.last_name);
+        }
+    });
+
+    inquirer
+        .prompt([
+            {
+                type: "input",
+                message: "What is their first name?",
+                name: "first"
+            },
+            {
+                type: "input",
+                message: "What is their last name?",
+                name: "last"
+            },
+            {
+                type: "list",
+                message: "What is their new role id?", 
+                choices: roles,
+                name: "role"
+            },
+            {
+                type: "list",
+                message: "What is their managers id?",
+                choices: managers,
+                name: "manager"
+            }
+        ]).then(function(response) {
+            let role = response.role.split(" ");
+            let manager_id = response.manager.split(" ");
+            connection.query("INSERT INTO employees SET ?", 
+            [{
+                first_name:response.first, 
+                last_name:response.last, 
+                role_id:role[0], 
+                manager_id:manager_id[0]
+            }], 
+            function(err, result) {
+                if(err) throw err;
+                console.table(result);
+                back(aDepartment);
+            });
+        });
+}
 
 //inquirer to return to main menu
 function back(whereto) {
@@ -227,4 +435,4 @@ function back(whereto) {
 //Query strings
 //==========================================================================
 
-const joined = "SELECT employees.id, employees.first_name, employees.last_name, employees.manager_id, roles.title, roles.salary, departments.name FROM employees INNER JOIN roles ON employees.role_id = roles.id INNER JOIN departments ON roles.department_id = departments.id ";
+const joined = "SELECT employees.id, employees.first_name, employees.last_name, employees.manager_id, roles.title, roles.id AS role_id, roles.salary, departments.id AS dep_id, departments.name FROM employees INNER JOIN roles ON employees.role_id = roles.id INNER JOIN departments ON roles.department_id = departments.id ";

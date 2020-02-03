@@ -28,12 +28,18 @@ CREATE TABLE employees (
 );
 
 -- join to display full employ information
+SELECT *
+FROM employees
+    INNER JOIN roles ON employees.role_id = roles.id
+	INNER JOIN departments ON roles.department_id = departments.id;
+
 SELECT 
 	employees.id, 
     employees.first_name, 
     employees.last_name, 
     employees.manager_id, 
     roles.title, 
+    roles.id AS role_id,
     roles.salary, 
     departments.name
 FROM employees
