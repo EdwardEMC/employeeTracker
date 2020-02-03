@@ -4,11 +4,6 @@
 var mysql = require("mysql");
 var inquirer = require("inquirer");
 
-//printing error when memory leaking occurs
-// process.on('warning', function(w){
-//     console.log(' => Suman interactive warning => ', w.stack || w);
-// });
-
 //========================================================================== 
 //Database Connection Area
 //==========================================================================
@@ -103,30 +98,38 @@ function vManagement() {
 
 //function to view the budget of departments or business as whole
 function budget() {
-    inquirer
-        .prompt([
-            {
-                type: "list",
-                message: "View",
-                choices: ["Total", "Sales", "Engineering", "Legal", "Finance", "Back"],
-                name: "budget"
-            }
-        ]).then(function(response) {
-            if(response.budget==="Back") {
-                return mainInq();
-            }
-            else if(response.budget==="Total") {
-                let WHERE = "";
-                return budgetQuery(WHERE);
-            }
-            let WHERE = "WHERE department.role = " + response.budget.toLowerCase();
-            return budgetQuery(WHERE)
-        });
+    connection.query("SELECT name FROM departments", function(err, result) {
+        if(err) throw err;
+        let departments = ["Total", "Back"];
+        result.forEach(element => departments.unshift(element.name));
+        
+        inquirer
+            .prompt([
+                {
+                    type: "list",
+                    message: "View",
+                    choices: departments,
+                    name: "budget"
+                }
+            ]).then(function(response) {
+                if(response.budget==="Back") {
+                    return mainInq();
+                }
+                else if(response.budget==="Total") {
+                    let where = "";
+                    return budgetQuery(where);
+                }
+                let what = response.budget;
+                let where = "WHERE ?";
+                return budgetQuery(where, what)
+            });
+    });
+    
 }
 
 //connection query for the budget()
-function budgetQuery(where) {
-    connection.query(joined + where, function(err, result) {
+function budgetQuery(where, what) {
+    connection.query(joined + where, [{name:what}], function(err, result) {
         if(err) throw err;
         console.table(result);
         let total = 0;
@@ -136,7 +139,7 @@ function budgetQuery(where) {
     });
 }
 
-//function to update employee role WORKING ON IT!!!!!!!
+//function to update employee role
 function upEmployee() {
     let options = [];
     let managers = []; //making the manager id automatically be assigned instead of user input
@@ -167,9 +170,11 @@ function upEmployee() {
     });
 }
 
-//function to update employee managers
+//function to update employee managers                              !!!!!NEED TO DO!!!!!
 function upManager() {
-
+    //choose someone to update as manager
+    //swap roles
+    //assign everyone the new managers ids
 }
 
 //function to add department, role, employee
@@ -205,7 +210,33 @@ function aDepartment() {
 
 //function to delete department, role or employee
 function dInfo() {
-
+    inquirer
+    .prompt([
+        {
+            type: "list",
+            message: "What would you like to remove?",
+            choices: ["Department", "Role", "Employee", "Back"],
+            name: "remove_column"
+        }
+    ]).then(function(response) {
+        //connection query to access all information??
+        connection.query(joined, function(err, result) {
+            if(err) throw err;
+            switch(response.remove_column.toLowerCase()) { //need to fix sub functions
+            case "department":
+                removeDep(result);
+                break;
+            case "role":
+                removeRole(result);
+                break;
+            case "employee":
+                removeEmp(result);
+                break;
+            default:
+                mainInq();
+        }
+        });  
+    });
 }
 
 //========================================================================== 
@@ -261,7 +292,7 @@ function mainInq() {
         });
 }
 
-//follow up inquirer for upEmployee() WORKING ON IT!!!!!!!
+//follow up inquirer for upEmployee()
 function updateEmp(response, roles, managers) {
     let worker = response.employee.split(" "); 
     inquirer
@@ -281,26 +312,28 @@ function updateEmp(response, roles, managers) {
         ]).then(function(response) {
             let role = response.role.split(" ");
             let manager_id = response.manager.split(" ");
-            connection.query("UPDATE employees SET ? WHERE ?", 
+            connection.query("UPDATE employees SET ? WHERE ? AND ?", 
             [
                 {
                     role_id: role[0],
                     manager_id: manager_id[0]
                 },
                 {
-                    first_name:worker[0], 
+                    first_name:worker[0]
+                }, 
+                {
                     last_name:worker[1]
                 }
-            ]), 
+            ], 
             function(err, result) {
                 if(err) throw err;
-                console.log(result);
+                console.log(worker.join(" ") + " has had their information been updated successfully");
                 mainMenu();
-            }
+            });
         });
 }
 
-// //function for new department
+//function for new department
 function newDep() {
     inquirer
         .prompt([
@@ -318,7 +351,7 @@ function newDep() {
         });
 }
 
-// //function for new role
+//function for new role
 function newRole(result) {
     let departments = []; //making the deparment id automatically be selected instead of user input
     result.forEach(element => {
@@ -361,7 +394,7 @@ function newRole(result) {
         });
 }
 
-// //function for new employee
+//function for new employee
 function newEmp(result) {
     let managers = []; //making the manager id automatically be assigned instead of user input
     let roles = []; //making the role id automatically be selected instead of user input
@@ -414,6 +447,80 @@ function newEmp(result) {
                 back(aDepartment);
             });
         });
+}
+
+//function to remove department
+function removeDep(result) {
+    let departments = []; //making the deparment id automatically be selected instead of user input
+    result.forEach(element => {
+        if(!departments.includes(element.dep_id + " " + element.name)) {
+            departments.push(element.dep_id + " " + element.name)
+        }
+    });
+    inquirer
+        .prompt([
+            {
+                type: "list",
+                message: "Which department would you like to delete?",
+                choices: departments,
+                name: "item"
+            }
+        ]).then(function(response) {
+        connection.query("DELETE FROM departments WHERE name = ?", [response.item], function(err, result) {
+            if(err) throw err;
+            console.log(response.item + " has been deleted sucessfully");
+            mainMenu();
+        });
+    });
+}
+
+//function to remove role
+function removeRole(result) {
+    let roles = []; //making the role id automatically be selected instead of user input
+    result.forEach(element => {
+        if(!roles.includes(element.role_id + " " + element.title)) {
+            roles.push(element.role_id + " " + element.title)
+        }
+    });
+    inquirer
+        .prompt([
+            {
+                type: "list",
+                message: "Which role would you like to delete?",
+                choices: roles,
+                name: "item"
+            }
+        ]).then(function(response) {
+        connection.query("DELETE FROM roles WHERE title = ?", [response.item], function(err, result) {
+            if(err) throw err;
+            console.log(response.item + " has been deleted sucessfully");
+            mainMenu();
+        });
+    });
+}
+
+//function to remove employee
+function removeEmp(result) {
+    let options = [];
+    result.forEach(element => {
+        options.push(element.first_name + " " + element.last_name);
+    });
+    inquirer
+        .prompt([
+            {
+                type: "list",
+                message: "Which employee would you like to delete?",
+                choices: options,
+                name: "item"
+            }
+        ]).then(function(response) {
+        let worker = response.item.split(" ");
+        connection.query("DELETE FROM employees WHERE first_name = ? AND last_name = ?", [worker[0], worker[1]], function(err, result) {
+            if(err) throw err;
+            console.log(response.item + " has been deleted sucessfully");
+            mainMenu();
+        });
+    });
 }
 
 //inquirer to return to main menu

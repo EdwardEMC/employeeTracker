@@ -44,7 +44,8 @@ SELECT
     departments.name
 FROM employees
     INNER JOIN roles ON employees.role_id = roles.id
-	INNER JOIN departments ON roles.department_id = departments.id;
+	INNER JOIN departments ON roles.department_id = departments.id
+WHERE departments.name = 'Engineering';
 
 -- example of where after the join WHERE departments.name = 'Legal';
 
