@@ -64,7 +64,7 @@ function vDeparment() {
                     });
                     break;
                 case "employees":
-                    connection.query("SELECT * FROM employees", function(err, result) {
+                    connection.query("SELECT * FROM employees INNER JOIN roles ON employees.role_id = roles.id", function(err, result) {
                         if(err) throw err;
                         console.table(result);
                         back(vDeparment);
@@ -179,12 +179,11 @@ function upEmployee() {
 function upManager() {
     connection.query(rightJ, function(err, result) {
         if(err) throw err;
-        // console.log(result);
         let options = [];
         let promote = [];
         result.forEach(element => {
-            if(!element.title.includes("Lead")) {
-                options.push(element.id + " " + element.first_name + " " + element.last_name + " | Current title: " + element.role_id + " | Manager Id: " + element.manager_id + " | Department: " + element.name);
+            if(!element.title.includes("Lead")&&element.id !== null) {
+                options.push(element.id + " " + element.first_name + " " + element.last_name + " | Current role_id/title: " + element.role_id + "/" + element.title + " | Manager Id: " + element.manager_id + " | Department: " + element.name);
             }
             if(element.title.includes("Lead")) {
                 promote.push(element.role_id + " | " + element.title);
@@ -372,14 +371,14 @@ function promoteEmp(options, promote) {
         ]).then(function(response) { 
             let worker = response.employee.split(" ");
             let manager = response.employee.split("| Manager Id: ").pop().split("| Department: ").shift();
-            let oldjob = response.employee.split("| Current title: ").pop().split("| Manager Id: ").shift(); 
+            let oldjob = response.employee.split("| Current role_id/title: ").pop().split("| Manager Id: ").shift(); 
             let promotion = response.promotion.split(" | ");
 
             //swap lead role and assign old manager a manager_id
             connection.query("UPDATE employees INNER JOIN roles ON employees.role_id = roles.id SET ? WHERE title = ?", 
             [
                 {
-                    role_id:oldjob, 
+                    role_id:oldjob[0], 
                     manager_id:manager
                 }, 
                 promotion[1]
@@ -409,7 +408,7 @@ function promoteEmp(options, promote) {
 
             // //assign everyone the new managers ids
             connection.query(
-                "UPDATE employees INNER JOIN roles ON employees.role_id = roles.id INNER JOIN departments ON roles.department_id = departments.id SET manager_id = ? WHERE role_id = ?", [worker[0], oldjob], function(err, result) {
+                "UPDATE employees INNER JOIN roles ON employees.role_id = roles.id INNER JOIN departments ON roles.department_id = departments.id SET manager_id = ? WHERE role_id = ?", [worker[0], oldjob[0]], function(err, result) {
                 if(err) throw err;
                 console.log(result);
             });
