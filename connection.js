@@ -145,7 +145,7 @@ function upEmployee() {
     let managers = ["null | No Current manager"]; //making the manager id automatically be assigned instead of user input
     let roles = []; //making the role id automatically be selected instead of user input
 
-    connection.query(rightJ, function(err, result) {       
+    connection.query(joined, function(err, result) {       
         result.forEach(element => {
             if(!roles.includes(element.role_id + " " + element.title)&&!element.title.includes("Lead")) {
                 roles.push(element.role_id + " " + element.title)
@@ -202,7 +202,7 @@ function aDepartment() {
             }
         ]).then(function(response) {
             //connection query to access all information??
-            connection.query(joined, function(err, result) {
+            connection.query(rightJ, function(err, result) {
                 if(err) throw err;
                 switch(response.add_column.toLowerCase()) { //need to fix sub functions
                     case "department":
@@ -324,6 +324,9 @@ function updateEmp(response, roles, managers) {
         ]).then(function(response) {
             let role = response.role.split(" ");
             let manager_id = response.manager.split(" ");
+            if(response.manager.includes("null")) {
+                manager_id = [null];
+            }
             connection.query("UPDATE employees SET ? WHERE ? AND ?", 
             [
                 {
@@ -421,7 +424,7 @@ function newDep() {
         ]).then(function(response) {
             connection.query("INSERT INTO departments SET ?", [{name:response.new}], function(err, result) {
                 if(err) throw err;
-                console.table(result);
+                console.log(response.new + " has been added to the business!");
                 back(aDepartment); //function to go back to chosen menu
             });
         });
@@ -435,6 +438,7 @@ function newRole(result) {
             departments.push(element.dep_id + " " + element.name)
         }
     });
+    console.log(departments);
 
     inquirer
         .prompt([
@@ -460,26 +464,28 @@ function newRole(result) {
             [{
                 title:response.title, 
                 salary:response.salary, 
-                role_id:id[0]
+                department_id:id[0]
             }], 
             function(err, result) {
                 if(err) throw err;
-                console.table(result);
+                console.log(response.title + " has been added to " + id[1] + "!");
                 back(aDepartment);
             });
         });
 };
 
 //function for new employee
-function newEmp(result) { //////////FIX THIS NULL NOT SHOWING UP AS NULL
+function newEmp(result) {
     let managers = ["null | No Current manager"]; //making the manager id automatically be assigned instead of user input
     let roles = []; //making the role id automatically be selected instead of user input
     result.forEach(element => {
         if(!roles.includes(element.role_id + " " + element.title)) {
             roles.push(element.role_id + " " + element.title)
         }
-        if(element.title.includes("Lead")) {
-            managers.push(element.id + " |" + element.title + " |" + element.first_name + " |" + element.last_name);
+        if(element.first_name) {
+            if(element.title.includes("Lead")) {
+                managers.push(element.id + " |" + element.title + " |" + element.first_name + " |" + element.last_name);
+            }
         }
     });
 
@@ -510,6 +516,9 @@ function newEmp(result) { //////////FIX THIS NULL NOT SHOWING UP AS NULL
         ]).then(function(response) {
             let role = response.role.split(" ");
             let manager_id = response.manager.split(" ");
+            if(response.manager.includes("null")) {
+                manager_id = [null];
+            }
             connection.query("INSERT INTO employees SET ?", 
             [{
                 first_name:response.first, 
@@ -519,7 +528,7 @@ function newEmp(result) { //////////FIX THIS NULL NOT SHOWING UP AS NULL
             }], 
             function(err, result) {
                 if(err) throw err;
-                console.table(result);
+                console.log(response.first + " " + response.last + " has been added to the " + role[1] + "!");
                 back(aDepartment);
             });
         });
@@ -620,4 +629,4 @@ function back(whereto) {
 
 const joined = "SELECT employees.id, employees.first_name, employees.last_name, employees.manager_id, roles.title, roles.id AS role_id, roles.salary, departments.id AS dep_id, departments.name FROM employees INNER JOIN roles ON employees.role_id = roles.id INNER JOIN departments ON roles.department_id = departments.id ";
 
-const rightJ = "SELECT employees.id, employees.first_name, employees.last_name, employees.manager_id, roles.title, roles.id AS role_id, roles.salary, departments.id AS dep_id, departments.name FROM employees RIGHT JOIN roles ON employees.role_id = roles.id INNER JOIN departments ON roles.department_id = departments.id ";
+const rightJ = "SELECT employees.id, employees.first_name, employees.last_name, employees.manager_id, roles.title, roles.id AS role_id, roles.salary, departments.id AS dep_id, departments.name FROM employees RIGHT JOIN roles ON employees.role_id = roles.id RIGHT JOIN departments ON roles.department_id = departments.id ";

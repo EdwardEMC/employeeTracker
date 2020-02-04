@@ -31,7 +31,7 @@ CREATE TABLE employees (
 SELECT *
 FROM employees
     RIGHT JOIN roles ON employees.role_id = roles.id
-	INNER JOIN departments ON roles.department_id = departments.id
+	RIGHT JOIN departments ON roles.department_id = departments.id
 ORDER BY departments.name;
 
 SELECT 
