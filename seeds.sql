@@ -15,7 +15,7 @@ INSERT INTO roles (title, salary, department_id) VALUE
     ("Accountant", 65000, 4);
 
 INSERT INTO employees (first_name, last_name, role_id, manager_id) VALUE
-    ("John", "Smith", 1, null),
+    -- ("John", "Smith", 1, null),
     ("Nancy", "Carter", 2, 1),
     ("Peter", "Sinclair", 2, 1),
     ("Edward", "Coad", 3, null),

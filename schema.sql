@@ -30,8 +30,9 @@ CREATE TABLE employees (
 -- join to display full employ information
 SELECT *
 FROM employees
-    INNER JOIN roles ON employees.role_id = roles.id
-	INNER JOIN departments ON roles.department_id = departments.id;
+    RIGHT JOIN roles ON employees.role_id = roles.id
+	INNER JOIN departments ON roles.department_id = departments.id
+ORDER BY departments.name;
 
 SELECT 
 	employees.id, 
