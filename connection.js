@@ -4,17 +4,22 @@
 var mysql = require("mysql");
 var inquirer = require("inquirer");
 
+//event listeners always nearing 11, increase default from 10 to 15
+require('events').EventEmitter.defaultMaxListeners = 15;
+
 //========================================================================== 
 //Database Connection Area
 //==========================================================================
-var connection = mysql.createConnection({ //Handling connect to the database
+//Handling connection infor for the database
+var connection = mysql.createConnection({ 
     host: "localhost",
     port: 3306,               // Your port; if not 3306
     user: "root",             // Your username
     password: "Barista!993",  // Your password
     database: "business_db"   // Database name
 });
-connection.connect(function(err) { //connecting to database
+//connecting to database
+connection.connect(function(err) { 
     if (err) throw err;
     console.log("connected as id " + connection.threadId);
     mainMenu();
@@ -408,7 +413,7 @@ function promoteEmp(options, promote) {
                 if(err) throw err;
                 console.log(result);
             });
-            back(upManager);
+            mainMenu();
         });
 };
 
@@ -445,12 +450,24 @@ function newRole(result) {
             {
                 type: "input",
                 message: "What is the new roles title?",
-                name: "title"
+                name: "title",
+                validate: async title => {
+                    if(title.match(/^[A-Za-z\s]+$/)) {
+                        return true;
+                    }
+                    return console.log("Title can only contain letters");
+                }
             },
             {
                 type: "input",
                 message: "What is the new roles salary?",
-                name: "salary"
+                name: "salary",
+                val: async name => {
+                    if(name.match(/^[0-9]+$/)) {
+                        return true;
+                    }
+                    return console.log("Please enter a valid number");
+                }
             },
             {
                 type: "list",
@@ -494,12 +511,24 @@ function newEmp(result) {
             {
                 type: "input",
                 message: "What is their first name?",
-                name: "first"
+                name: "first",
+                validate: async first => {
+                    if(first.match(/^[A-Za-z\s]+$/)) {
+                        return true;
+                    }
+                    return console.log("Please enter a valid name");
+                }
             },
             {
                 type: "input",
                 message: "What is their last name?",
-                name: "last"
+                name: "last",
+                validate: async last => {
+                    if(last.match(/^[A-Za-z\s]+$/)) {
+                        return true;
+                    }
+                    return console.log("Please enter a valid name");
+                }
             },
             {
                 type: "list",
