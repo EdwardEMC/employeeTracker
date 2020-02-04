@@ -10,7 +10,7 @@ INSERT INTO roles (title, salary, department_id) VALUE
     ("Lead Engineer", 94000, 2),
     ("Software Engineer", 73000, 2),
     ("Hardware Engineer", 79000, 2),
-    ("Legal Team Lead", 90000, 3),
+    ("Legal Team Lead", 95000, 3),
     ("Lawyer", 80000, 3),
     ("Accountant", 65000, 4);
 
@@ -22,6 +22,7 @@ INSERT INTO employees (first_name, last_name, role_id, manager_id) VALUE
     ("Michael", "Schumer", 4, 4),
     ("Jacob", "Dims", 4, 4),
     ("Taylor", "Whist", 5, 4),
-    ("Steven", "Cheng", 6, null),
+    ("Kellie", "Jordan", 6, null),
+    ("Steven", "Cheng", 7, 8),
     ("Drew", "Carrey", 7, 8),
     ("Lucy", "Leiu", 8, null);

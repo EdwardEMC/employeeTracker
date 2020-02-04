@@ -170,11 +170,24 @@ function upEmployee() {
     });
 }
 
-//function to update employee managers                              !!!!!NEED TO DO!!!!!
+//function to update employee managers
 function upManager() {
-    //choose someone to update as manager
-    //swap roles
-    //assign everyone the new managers ids
+    connection.query(joined, function(err, result) {
+        if(err) throw err;
+        // console.log(result);
+        let options = [];
+        let promote = [];
+        result.forEach(element => {
+            if(!element.title.includes("Lead")) {
+                options.push(element.id + " " + element.first_name + " " + element.last_name + " | Current title: " + element.role_id + " | Manager Id: " + element.manager_id + " | Department: " + element.name);
+            }
+            if(element.title.includes("Lead")) {
+                promote.push(element.role_id + " | " + element.title);
+            }
+        });
+        // console.log(options);
+        promoteEmp(options, promote);
+    });   
 }
 
 //function to add department, role, employee
@@ -192,18 +205,18 @@ function aDepartment() {
             connection.query(joined, function(err, result) {
                 if(err) throw err;
                 switch(response.add_column.toLowerCase()) { //need to fix sub functions
-                case "department":
-                    newDep();
-                    break;
-                case "role":
-                    newRole(result);
-                    break;
-                case "employee":
-                    newEmp(result);
-                    break;
-                default:
-                    mainInq();
-            }
+                    case "department":
+                        newDep();
+                        break;
+                    case "role":
+                        newRole(result);
+                        break;
+                    case "employee":
+                        newEmp(result);
+                        break;
+                    default:
+                        mainInq();
+                }
             });  
         });
 }
@@ -219,22 +232,21 @@ function dInfo() {
             name: "remove_column"
         }
     ]).then(function(response) {
-        //connection query to access all information??
         connection.query(joined, function(err, result) {
             if(err) throw err;
-            switch(response.remove_column.toLowerCase()) { //need to fix sub functions
-            case "department":
-                removeDep(result);
-                break;
-            case "role":
-                removeRole(result);
-                break;
-            case "employee":
-                removeEmp(result);
-                break;
-            default:
-                mainInq();
-        }
+            switch(response.remove_column.toLowerCase()) {
+                case "department":
+                    removeDep(result);
+                    break;
+                case "role":
+                    removeRole(result);
+                    break;
+                case "employee":
+                    removeEmp(result);
+                    break;
+                default:
+                    mainInq();
+            }
         });  
     });
 }
@@ -445,6 +457,69 @@ function newEmp(result) {
                 if(err) throw err;
                 console.table(result);
                 back(aDepartment);
+            });
+        });
+}
+
+//function for update managers
+function promoteEmp(options, promote) {
+    inquirer    //choose someone to update as manager
+        .prompt([
+            {
+                type: "list",
+                message: "Who do you want to promote?",
+                choices: options,
+                name: "employee"
+            },
+            {
+                type: "list",
+                message: "What position are they filling?",
+                choices: promote,
+                name: "promotion"
+            }
+        ]).then(function(response) { 
+            let worker = response.employee.split(" ");
+            let manager = response.employee.split("| Manager Id: ").pop().split("| Department: ").shift();
+            let oldjob = response.employee.split("| Current title: ").pop().split("| Manager Id: ").shift(); 
+            let promotion = response.promotion.split(" | ");
+
+            //swap lead role and assign old manager a manager_id
+            connection.query("UPDATE employees INNER JOIN roles ON employees.role_id = roles.id SET ? WHERE title = ?", 
+            [
+                {
+                    role_id:oldjob, 
+                    manager_id:manager
+                }, 
+                promotion[1]
+            ], 
+            function(err, result) {
+                if(err) throw err;
+                console.log(result);
+            });
+            
+            //set new role
+            connection.query("UPDATE employees SET manager_id = null, ? WHERE ? AND ?", 
+            [
+                {
+                    role_id:promotion[0], 
+                }, 
+                {
+                    first_name:worker[1]
+                }, 
+                {
+                    last_name:worker[2]
+                }
+            ], 
+            function(err, result) {
+                if(err) throw err;
+                console.log(result);
+            });
+
+            // //assign everyone the new managers ids
+            connection.query(
+                "UPDATE employees INNER JOIN roles ON employees.role_id = roles.id INNER JOIN departments ON roles.department_id = departments.id SET manager_id = ? WHERE role_id = ?", [worker[0], oldjob], function(err, result) {
+                if(err) throw err;
+                console.log(result);
             });
         });
 }
