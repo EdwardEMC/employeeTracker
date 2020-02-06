@@ -4,7 +4,7 @@
 var mysql = require("mysql");
 var inquirer = require("inquirer");
 
-//event listeners always nearing 11, increase default from 10 to 15
+//event listener consistently at 11, increase default from 10 to 15
 require('events').EventEmitter.defaultMaxListeners = 15;
 
 //========================================================================== 
@@ -29,10 +29,10 @@ connection.connect(function(err) {
 //Functions Area
 //==========================================================================
 //function for main menu options
-function mainMenu() {
+function mainMenu() { //change console.table to random entry picture
     connection.query("SELECT * FROM employees", function(err, result) {
         if(err) throw err;
-        // console.table(result); //change to random entry picture
+        // console.table(result); 
         mainInq();//inquirer to ask what the user wants to do
     });
 };
@@ -50,25 +50,13 @@ function vDeparment() {
         ]).then(function(response) {
             switch(response.view.toLowerCase()) {
                 case "departments":
-                    connection.query("SELECT * FROM departments", function(err, result) {
-                        if(err) throw err;
-                        console.table(result);
-                        back(vDeparment); //function to go back to chosen menu
-                    });
+                    connectQ("SELECT * FROM departments", back, vDeparment);
                     break;
                 case "roles":
-                    connection.query("SELECT * FROM roles", function(err, result) {
-                        if(err) throw err;
-                        console.table(result);
-                        back(vDeparment);
-                    });
+                    connectQ("SELECT * FROM roles", back, vDeparment);
                     break;
                 case "employees":
-                    connection.query("SELECT * FROM employees INNER JOIN roles ON employees.role_id = roles.id", function(err, result) {
-                        if(err) throw err;
-                        console.table(result);
-                        back(vDeparment);
-                    });
+                    connectQ("SELECT * FROM employees INNER JOIN roles ON employees.role_id = roles.id", back, vDeparment);
                     break;
                 default:
                     mainInq();
@@ -78,27 +66,35 @@ function vDeparment() {
 
 //function to view employees by manager
 function vManagement() {
-    inquirer
-        .prompt([
-            {
-                type: "list",
-                message: "View",
-                choices: ["Sales", "Engineering", "Legal", "Finance", "Back"],
-                name: "role"
+    connection.query("SELECT title FROM roles", function(err, result) {
+        if(err) throw err;
+        let roles = ["Back"];
+        result.forEach(element => {
+            if(element.title.includes("Lead")) {
+                roles.unshift(element.title);
             }
-        ]).then(function(response) {
-            if(response.role === "Back") {
-               return mainInq();
-            }
-            connection.query(
-                joined + "WHERE departments.name = ?", 
-                [response.role], function(err, result) { 
-                    if(err) throw err;
-                    console.table(result);
-                    back(vManagement);
-                }
-            );
         });
+        inquirer
+            .prompt([
+                {
+                    type: "list",
+                    message: "View",
+                    choices: roles,
+                    name: "role"
+                }
+            ]).then(function(response) {
+                if(response.role === "Back") {
+                    return mainInq();
+                }
+                connection.query(
+                    joined + "WHERE departments.name = ?", [response.role], function(err, result) { 
+                        if(err) throw err;
+                        console.table(result);
+                        back(vManagement);
+                    }
+                );
+            });
+    });    
 };
 
 //function to view the budget of departments or business as whole
@@ -147,7 +143,7 @@ function budgetQuery(where, what) {
 //function to update employee role
 function upEmployee() {
     let options = [];
-    let managers = ["null | No Current manager"]; //making the manager id automatically be assigned instead of user input
+    let managers = ["null | No Current manager"]; //making the manager id automatically be assigned instead of user input or null if not filled
     let roles = []; //making the role id automatically be selected instead of user input
 
     connection.query(joined, function(err, result) {       
@@ -189,7 +185,6 @@ function upManager() {
                 promote.push(element.role_id + " | " + element.title);
             }
         });
-        // console.log(options);
         promoteEmp(options, promote);
     });   
 };
@@ -205,10 +200,9 @@ function aDepartment() {
                 name: "add_column"
             }
         ]).then(function(response) {
-            //connection query to access all information??
             connection.query(rightJ, function(err, result) {
                 if(err) throw err;
-                switch(response.add_column.toLowerCase()) { //need to fix sub functions
+                switch(response.add_column.toLowerCase()) {
                     case "department":
                         newDep();
                         break;
@@ -423,12 +417,18 @@ function newDep() {
             {
                 type: "input",
                 message: "What is the new departments name?",
-                name: "new"
+                name: "newDep",
+                validate: async newDep => {
+                    if(newDep.match(/^[A-Za-z\s]+$/)) {
+                        return true;
+                    }
+                    return console.log("Department name can only contain letters");
+                }
             }
         ]).then(function(response) {
-            connection.query("INSERT INTO departments SET ?", [{name:response.new}], function(err, result) {
+            connection.query("INSERT INTO departments SET ?", [{name:response.newDep}], function(err, result) {
                 if(err) throw err;
-                console.log(response.new + " has been added to the business!");
+                console.log(response.newDep + " has been added to the business!");
                 back(aDepartment); //function to go back to chosen menu
             });
         });
@@ -636,7 +636,7 @@ function removeEmp(result) {
     });
 };
 
-//inquirer to return to main menu
+//inquirer to return to a previous menu
 function back(whereto) {
     inquirer
         .prompt([
@@ -652,9 +652,21 @@ function back(whereto) {
 };
 
 //========================================================================== 
-//Query strings
+//Query function & strings
 //==========================================================================
+//connection query vDepartments()
+function connectQ(query, func, menu) {
+    connection.query(query, function(err, result) {
+        if(err) throw err;
+        console.table(result);
+        func(menu); //function to go back to chosen menu
+    });
+}
 
+//query for showing all filled positions
 const joined = "SELECT employees.id, employees.first_name, employees.last_name, employees.manager_id, roles.title, roles.id AS role_id, roles.salary, departments.id AS dep_id, departments.name FROM employees INNER JOIN roles ON employees.role_id = roles.id INNER JOIN departments ON roles.department_id = departments.id ";
 
+//query to show all employees plus roles or departments that still need employees assigned
 const rightJ = "SELECT employees.id, employees.first_name, employees.last_name, employees.manager_id, roles.title, roles.id AS role_id, roles.salary, departments.id AS dep_id, departments.name FROM employees RIGHT JOIN roles ON employees.role_id = roles.id RIGHT JOIN departments ON roles.department_id = departments.id ";
+
+//673 lines before connectQ
