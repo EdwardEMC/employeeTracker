@@ -230,7 +230,7 @@ function dInfo() {
             name: "remove_column"
         }
     ]).then(function(response) {
-        connection.query(joined, function(err, result) {
+        connection.query(rightJ, function(err, result) {
             if(err) throw err;
             switch(response.remove_column.toLowerCase()) {
                 case "department":
@@ -591,8 +591,8 @@ function removeDep(result) {
 function removeRole(result) {
     let roles = []; //making the role id automatically be selected instead of user input
     result.forEach(element => {
-        if(!roles.includes(element.role_id + " " + element.title)) {
-            roles.push(element.role_id + " " + element.title)
+        if(!roles.includes(element.title)) {
+            roles.push(element.title)
         }
     });
     inquirer
