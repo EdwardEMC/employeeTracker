@@ -7,7 +7,7 @@ Users can view the business by departments, roles or the entire payroll. Going f
 
 ![view](/images/viewSS.jpg?raw=true "view")
 
-The budget for the business may be veiw as a whole or by individual departments.
+The budget for the business may be veiw as a total or by individual departments.
 
 ![budget](/images/budgetSS.jpg?raw=true "budget")
 
